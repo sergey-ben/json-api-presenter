@@ -1,0 +1,29 @@
+{
+    "name": "simple-lib/json-api-presenter",
+    "description": "",
+    "keywords": ["json-api", "composer", "transformer", "jsonapi", "json"],
+    "authors": [
+        {
+            "name": "Sergey B.",
+            "email": "sergey.b.dev@gmail.com"
+        }
+    ],
+    "type": "library",
+    "require": {
+		"php": ">=7.0",
+        "ext-json": "*"
+    },
+	"require-dev": {
+		"phpunit/phpunit": "6.*"
+    },
+	"autoload": {
+        "psr-4": {
+            "JsonApiPresenter\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "classmap": [
+            "src/example"
+        ]
+    }
+}
