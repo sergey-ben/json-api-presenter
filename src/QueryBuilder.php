@@ -29,9 +29,14 @@ class QueryBuilder
     private $ids = [];
 
     /**
-     * @var RequestIncludes
+     * @var string[]
      */
     private $includes;
+
+    /**
+     * @var string
+     */
+    private $delimiter = IncludesRequest::DEFAULT_DELIMITER;
 
     /**
      * @var ResourceCacheInterface
@@ -47,7 +52,7 @@ class QueryBuilder
     {
         $this->resourceManager = $resourceManager;
         $this->cache = $cache;
-        $this->includes = new RequestIncludes();
+        $this->includes = new IncludesRequest();
     }
 
     /**
@@ -89,7 +94,18 @@ class QueryBuilder
      */
     public function include(string ...$includes): QueryBuilder
     {
-        $this->includes = new RequestIncludes($includes);
+        $this->includes = $includes;
+
+        return $this;
+    }
+
+    /**
+     * @param string $delimiter
+     * @return QueryBuilder
+     */
+    public function includesDelimiter(string $delimiter): QueryBuilder
+    {
+        $this->delimiter = $delimiter;
 
         return $this;
     }
@@ -100,7 +116,7 @@ class QueryBuilder
      * @param JsonApi|null $jsonApi
      * @return Document
      * @throws Exceptions\InvalidArgumentException
-     * @throws Exceptions\ResourceRepositoryNotFoundException
+     * @throws Exceptions\DataSourceNotFoundException
      * @throws NoResultException
      * @throws NonUniqueResultException
      * @throws RuntimeException
@@ -117,7 +133,7 @@ class QueryBuilder
         );
 
         $resource = $this->getSingleResource($identity);
-        $includes = $this->getIncludesForResource($resource);
+        $includes = $this->getIncludesForResource($this->getIncludesRequest(), $resource);
         $jsonApi = $jsonApi ?? JsonApi::default();
 
         return new Document(
@@ -135,7 +151,7 @@ class QueryBuilder
      * @param JsonApi|null $jsonApi
      * @return Collection
      * @throws Exceptions\InvalidArgumentException
-     * @throws Exceptions\ResourceRepositoryNotFoundException
+     * @throws Exceptions\DataSourceNotFoundException
      * @throws NoResultException
      * @throws NonUniqueResultException
      * @throws RuntimeException
@@ -146,7 +162,7 @@ class QueryBuilder
             return new ResourceIdentifier($id, $this->resourceType);
         }, $this->ids));
 
-        $includes = $this->getIncludesForResources(...$resources);
+        $includes = $this->getIncludesForResources($this->getIncludesRequest(), ...$resources);
         $jsonApi = $jsonApi ?? JsonApi::default();
 
         return new Collection(
@@ -160,41 +176,43 @@ class QueryBuilder
     }
 
     /**
+     * @param IncludesRequest $includes
      * @param ResourceObject ...$resources
      * @return array
      * @throws Exceptions\InvalidArgumentException
+     * @throws Exceptions\DataSourceNotFoundException
      * @throws NoResultException
      * @throws NonUniqueResultException
      * @throws RuntimeException
-     * @throws Exceptions\ResourceRepositoryNotFoundException
      */
-    private function getIncludesForResources(ResourceObject ...$resources): array
+    private function getIncludesForResources(IncludesRequest $includes, ResourceObject ...$resources): array
     {
         $result = [];
 
         foreach ($resources as $resource) {
-            $result = \array_merge($result, $this->getIncludesForResource($resource));
+            $result = \array_merge($result, $this->getIncludesForResource($includes, $resource));
         }
 
         return $result;
     }
 
     /**
+     * @param IncludesRequest $includes
      * @param ResourceObject $resource
      * @return array
      * @throws Exceptions\InvalidArgumentException
-     * @throws Exceptions\ResourceRepositoryNotFoundException
+     * @throws Exceptions\DataSourceNotFoundException
      * @throws NoResultException
      * @throws NonUniqueResultException
      * @throws RuntimeException
      */
-    private function getIncludesForResource(ResourceObject $resource): array
+    private function getIncludesForResource(IncludesRequest $includes, ResourceObject $resource): array
     {
         $relationships = $resource->getRelationships();
         $result = [];
 
         foreach ($relationships as $relationship) {
-            if (!$this->includes->hasInclude($relationship->getName())) {
+            if (!$includes->hasInclude($relationship->getName())) {
                 continue ;
             }
 
@@ -203,13 +221,13 @@ class QueryBuilder
             }
 
             if ($relationship instanceof ToOneRelationship) {
-                $result = \array_merge($result, $this->getToOneRelationshipIncludes($relationship));
+                $result = \array_merge($result, $this->getToOneRelationshipIncludes($includes, $relationship));
 
                 continue ;
             }
 
             if ($relationship instanceof ToManyRelationship) {
-                $result = \array_merge($result, $this->getToManyRelationshipIncludes($relationship));
+                $result = \array_merge($result, $this->getToManyRelationshipIncludes($includes, $relationship));
 
                 continue ;
             }
@@ -219,70 +237,51 @@ class QueryBuilder
     }
 
     /**
+     * @param IncludesRequest $includes
      * @param ToOneRelationship $relationship
      * @return array
      * @throws Exceptions\InvalidArgumentException
+     * @throws Exceptions\DataSourceNotFoundException
      * @throws NoResultException
      * @throws NonUniqueResultException
      * @throws RuntimeException
-     * @throws Exceptions\ResourceRepositoryNotFoundException
      */
-    private function getToOneRelationshipIncludes(ToOneRelationship $relationship): array
+    private function getToOneRelationshipIncludes(IncludesRequest $includes, ToOneRelationship $relationship): array
     {
-        $document = $this
-            ->resourceManager
-            ->createQueryBuilder()
-            ->select($relationship->getData()->getType())
-            ->withId($relationship->getData()->getId())
-            ->include(...$this->includes->includesOf($relationship->getName())->toArray())
-            ->getSingleResult();
+        $resource = $this->getSingleResource($relationship->getData());
+        $includes = $this->getIncludesForResource(
+            $includes->includesOf($relationship->getName()),
+            $resource
+        );
 
-        $result = [$document->getData()];
-
-        if ($document->hasIncludes()) {
-            $result = \array_merge($document->getIncludes());
-        }
-
-        return $result;
+        return \array_merge([$resource], $includes);
     }
 
     /**
+     * @param IncludesRequest $includes
      * @param ToManyRelationship $relationship
      * @return array
      * @throws Exceptions\InvalidArgumentException
-     * @throws Exceptions\ResourceRepositoryNotFoundException
+     * @throws Exceptions\DataSourceNotFoundException
      * @throws NoResultException
      * @throws NonUniqueResultException
      * @throws RuntimeException
      */
-    private function getToManyRelationshipIncludes(ToManyRelationship $relationship): array
+    private function getToManyRelationshipIncludes(IncludesRequest $includes, ToManyRelationship $relationship): array
     {
-        $type = $relationship->getType();
-        $ids = \array_map(function (ResourceIdentifier $identifier) {
-            return $identifier->getId();
-        }, $relationship->getData());
+        $resources = $this->getResourcesCollection(...$relationship->getData());
+        $includes = $this->getIncludesForResources(
+            $includes->includesOf($relationship->getName()),
+            ...$resources
+        );
 
-        $collection = $this
-            ->resourceManager
-            ->createQueryBuilder()
-            ->select($type)
-            ->withIds(...$ids)
-            ->include(...$this->includes->includesOf($relationship->getName())->toArray())
-            ->getResult();
-
-        $result = $collection->getData();
-
-        if ($collection->hasIncludes()) {
-            $result = \array_merge($collection->getIncludes());
-        }
-
-        return $result;
+        return \array_merge($resources, $includes);
     }
 
     /**
      * @param ResourceIdentifier $identity
      * @return ResourceObject
-     * @throws Exceptions\ResourceRepositoryNotFoundException
+     * @throws Exceptions\DataSourceNotFoundException
      * @throws NoResultException
      * @throws NonUniqueResultException
      * @throws RuntimeException
@@ -293,11 +292,11 @@ class QueryBuilder
             return $this->cache->get((string) $identity);
         }
 
-        $repository = $this->resourceManager->repositoryFor(
+        $dataSource = $this->resourceManager->dataSourceFor(
             $this->resourceType
         );
 
-        $resources = $repository->havingIds($identity->getId());
+        $resources = $dataSource->havingIds($identity->getId());
 
         if (\count($resources) == 0) {
             throw new NoResultException();
@@ -320,13 +319,14 @@ class QueryBuilder
     /**
      * @param ResourceIdentifier ...$identifiers
      * @return ResourceObjectInterface[]
-     * @throws Exceptions\ResourceRepositoryNotFoundException
+     * @throws Exceptions\DataSourceNotFoundException
      * @throws RuntimeException
      */
     private function getResourcesCollection(ResourceIdentifier ...$identifiers)
     {
         $result = [];
         $ids = [];
+        $resourceType = null;
 
         foreach ($identifiers as $identifier) {
             if ($this->cache->has((string) $identifier)) {
@@ -335,14 +335,19 @@ class QueryBuilder
                 continue ;
             }
 
+            $resourceType = $identifier->getType();
             $ids[] = $identifier->getId();
         }
 
-        $repository = $this->resourceManager->repositoryFor(
-            $this->resourceType
+        if (null === $resourceType) {
+            return $result;
+        }
+
+        $dataSource = $this->resourceManager->dataSourceFor(
+            $resourceType
         );
 
-        $resources = $repository->havingIds(...$ids);
+        $resources = $dataSource->havingIds(...$ids);
 
         foreach ($resources as $resource) {
             $this->cache->add(
@@ -352,6 +357,17 @@ class QueryBuilder
         }
 
         return \array_merge($result, $resources);
+    }
+
+    /**
+     * @return IncludesRequest
+     */
+    private function getIncludesRequest(): IncludesRequest
+    {
+        return new IncludesRequest(
+            $this->includes,
+            $this->delimiter
+        );
     }
 
 }

@@ -35,6 +35,14 @@ final class Document implements TopLevelJsonObject
      */
     private $includes;
 
+    /**
+     * Document constructor.
+     * @param ResourceObjectInterface $data
+     * @param Meta|null $meta
+     * @param ResourceLinks|null $links
+     * @param JsonApi|null $jsonApi
+     * @param ResourceObjectInterface ...$includes
+     */
     public function __construct(
         ResourceObjectInterface $data,
         Meta $meta = null,
@@ -107,6 +115,9 @@ final class Document implements TopLevelJsonObject
         return $result;
     }
 
+    /**
+     * @return array
+     */
     public function jsonSerialize()
     {
         return $this->toArray();

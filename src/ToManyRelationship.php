@@ -65,7 +65,6 @@ final class ToManyRelationship implements Relationship
         $this->data[] = $identifier;
     }
 
-
     /**
      * @return string
      */

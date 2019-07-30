@@ -4,11 +4,11 @@
 namespace JsonApiPresenter\Contracts;
 
 
-interface ResourceRepositoryInterface
+interface DataSourceInterface
 {
 
     /**
-     * @param string[] $ids
+     * @param string ...$ids
      * @return ResourceObjectInterface[]
      */
     public function havingIds(string ...$ids): array;

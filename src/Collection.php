@@ -40,6 +40,15 @@ final class Collection implements TopLevelJsonObject
      */
     private $includes;
 
+    /**
+     * Collection constructor.
+     * @param array $data
+     * @param Meta|null $meta
+     * @param ResourceLinks|null $links
+     * @param PaginationLinks|null $paginationLinks
+     * @param JsonApi|null $jsonApi
+     * @param ResourceObjectInterface ...$includes
+     */
     public function __construct(
         array $data = [],
         Meta $meta = null,

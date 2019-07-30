@@ -3,58 +3,68 @@
 
 use JsonApiPresenter\Attributes;
 use JsonApiPresenter\Contracts\ResourceObjectInterface;
-use JsonApiPresenter\Contracts\ResourceRepositoryInterface;
+use JsonApiPresenter\Contracts\DataSourceInterface;
 use JsonApiPresenter\Link;
 use JsonApiPresenter\RelationshipsCollection;
 use JsonApiPresenter\ResourceIdentifier;
 use JsonApiPresenter\ResourceLinks;
 use JsonApiPresenter\ResourceObject;
-use JsonApiPresenter\ToManyRelationship;
+use JsonApiPresenter\ToOneRelationship;
 
-class PeopleRepository implements ResourceRepositoryInterface
+class BooksDataSource implements DataSourceInterface
 {
     private $map;
 
     /**
-     * BooksRepository constructor.
+     * BooksDataSource constructor.
      * @throws \JsonApiPresenter\Exceptions\InvalidArgumentException
      */
     public function __construct()
     {
         $this->map = [
             1 => new ResourceObject(
-                new ResourceIdentifier(1, 'people'),
+                new ResourceIdentifier(1, 'books'),
                 new Attributes([
-                    'name' => 'Vasya'
+                    'title' => 'Book a'
                 ]),
                 new RelationshipsCollection(
-                    new ToManyRelationship(
-                        'books',
-                        [
-                            new ResourceIdentifier(1, 'books'),
-                            new ResourceIdentifier(2, 'books')
-                        ]
+                    new ToOneRelationship(
+                        'author',
+                        new ResourceIdentifier(1, 'people')
                     )
                 ),
                 new ResourceLinks(
-                    new Link('/people/1')
+                    new Link('/books/1')
                 )
             ),
             2 => new ResourceObject(
-                new ResourceIdentifier(2, 'people'),
+                new ResourceIdentifier(2, 'books'),
                 new Attributes([
-                    'name' => 'Petya'
+                    'title' => 'Book b'
                 ]),
                 new RelationshipsCollection(
-                    new ToManyRelationship(
-                        'books',
-                        [
-                            new ResourceIdentifier(3, 'books')
-                        ]
+                    new ToOneRelationship(
+                        'author',
+                        new ResourceIdentifier(1, 'people')
                     )
                 ),
                 new ResourceLinks(
-                    new Link('/people/2')
+                    new Link('/books/2')
+                )
+            ),
+            3 => new ResourceObject(
+                new ResourceIdentifier(3, 'books'),
+                new Attributes([
+                    'title' => 'Book c'
+                ]),
+                new RelationshipsCollection(
+                    new ToOneRelationship(
+                        'author',
+                        new ResourceIdentifier(2, 'people')
+                    )
+                ),
+                new ResourceLinks(
+                    new Link('/books/3')
                 )
             ),
         ];

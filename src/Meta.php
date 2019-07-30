@@ -14,6 +14,10 @@ final class Meta implements Arrayable
      */
     private $meta;
 
+    /**
+     * Meta constructor.
+     * @param array $meta
+     */
     public function __construct(array $meta = [])
     {
         $this->meta = $meta;

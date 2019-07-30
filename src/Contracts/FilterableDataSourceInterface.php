@@ -4,7 +4,7 @@
 namespace JsonApiPresenter\Contracts;
 
 
-interface FilterableResourceRepository
+interface FilterableDataSourceInterface
 {
 
 

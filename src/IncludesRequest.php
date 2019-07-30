@@ -4,9 +4,10 @@
 namespace JsonApiPresenter;
 
 
-class RequestIncludes
+class IncludesRequest
 {
-    const DELIMITER = '.';
+
+    const DEFAULT_DELIMITER = '.';
 
     /**
      * @var array
@@ -14,12 +15,19 @@ class RequestIncludes
     private $includes;
 
     /**
-     * RequestIncludes constructor.
-     * @param array $includes
+     * @var string
      */
-    public function __construct(array $includes = [])
+    private $delimiter;
+
+    /**
+     * RequestIncludes constructor.
+     * @param string[] $includes
+     * @param string $delimiter
+     */
+    public function __construct(array $includes = [], string $delimiter = self::DEFAULT_DELIMITER)
     {
         $this->includes = $includes;
+        $this->delimiter = $delimiter;
     }
 
     /**
@@ -32,19 +40,19 @@ class RequestIncludes
 
     /**
      * @param string $name
-     * @return RequestIncludes
+     * @return IncludesRequest
      */
-    public function includesOf(string $name): RequestIncludes
+    public function includesOf(string $name): IncludesRequest
     {
         $includes = \array_filter($this->toArray(), function(string $include) use ($name) {
-            return \strpos($include, $name . self::DELIMITER) === 0;
+            return \strpos($include, $name . $this->delimiter) === 0;
         });
 
         $includes = \array_map(function(string $include) use ($name) {
-            return preg_replace(\sprintf('/%s%s/', $name, self::DELIMITER), '', $include, 1);
+            return preg_replace(\sprintf('/%s%s/', $name, $this->delimiter), '', $include, 1);
         }, $includes);
 
-        return new RequestIncludes($includes);
+        return new IncludesRequest($includes);
     }
 
     /**

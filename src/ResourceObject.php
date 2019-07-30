@@ -34,6 +34,15 @@ class ResourceObject implements ResourceObjectInterface
      */
     private $meta;
 
+    /**
+     * ResourceObject constructor.
+     * @param ResourceIdentifier $identifier
+     * @param Attributes|null $attributes
+     * @param RelationshipsCollection|null $relationships
+     * @param ResourceLinks|null $links
+     * @param Meta|null $meta
+     * @throws Exceptions\InvalidArgumentException
+     */
     public function __construct(
         ResourceIdentifier $identifier,
         Attributes $attributes = null,
@@ -72,24 +81,6 @@ class ResourceObject implements ResourceObjectInterface
         }
 
         $this->links->addSelfLink($href, $meta);
-    }
-
-    /**
-     * @param string $href
-     * @param Meta|null $meta
-     */
-    public function addRelatedLink(string $href, Meta $meta = null)
-    {
-        if (null === $this->links) {
-            $this->links = new ResourceLinks(null, new Link(
-                $href,
-                $meta
-            ));
-
-            return ;
-        }
-
-        $this->links->addRelatedLink($href, $meta);
     }
 
     /**

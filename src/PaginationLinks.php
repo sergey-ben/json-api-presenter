@@ -29,6 +29,13 @@ class PaginationLinks implements Arrayable
      */
     private $next;
 
+    /**
+     * PaginationLinks constructor.
+     * @param Link $first
+     * @param Link $last
+     * @param Link|null $prev
+     * @param Link|null $next
+     */
     public function __construct(Link $first, Link $last, Link $prev = null, Link $next = null)
     {
         $this->first = $first;

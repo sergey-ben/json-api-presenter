@@ -12,15 +12,15 @@ class App
     public function start()
     {
         $manager = new ResourceManager();
-        $manager->register('books', new BooksRepository());
-        $manager->register('people', new PeopleRepository());
+        $manager->register('books', new BooksDataSource());
+        $manager->register('people', new PeopleDataSource());
 
         $books = $manager
             ->createQueryBuilder()
             ->select('people')
-            ->withIds(1, 2)
+            ->withId(1)
             ->include('books')
-            ->getResult();
+            ->getSingleResult();
 
         echo json_encode($books);
     }

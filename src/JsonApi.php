@@ -21,6 +21,11 @@ final class JsonApi implements Arrayable
      */
     private $meta;
 
+    /**
+     * JsonApi constructor.
+     * @param string $version
+     * @param Meta|null $meta
+     */
     public function __construct(string $version = self::VERSION_1_1, Meta $meta = null)
     {
         $this->version = $version;

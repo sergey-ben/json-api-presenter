@@ -19,6 +19,11 @@ class Link implements Arrayable
      */
     private $meta;
 
+    /**
+     * Link constructor.
+     * @param string $href
+     * @param Meta|null $meta
+     */
     public function __construct(string $href, Meta $meta = null)
     {
         $this->href = $href;
