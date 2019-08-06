@@ -179,7 +179,7 @@ class QueryBuilder
      */
     public function include(string ...$includes): QueryBuilder
     {
-        $this->includes = $includes;
+        $this->includes = \array_merge($this->includes, $includes);
 
         return $this;
     }
@@ -429,7 +429,7 @@ class QueryBuilder
         }
 
         $dataSource = $this->resourceManager->dataSourceFor(
-            $this->resourceType
+            $identity->getType()
         );
 
         $resources = $dataSource->havingIds($identity->getId());
