@@ -4,11 +4,20 @@
 namespace JsonApiPresenter;
 
 
+use JsonApiPresenter\Contracts\AppliesRelationshipsDataSourceInterface;
+use JsonApiPresenter\Contracts\CountableDataSourceInterface;
+use JsonApiPresenter\Contracts\ProvidesPaginationLinksDataSourceInterface;
+use JsonApiPresenter\Contracts\QueryableDataSourceInterface;
 use JsonApiPresenter\Contracts\ResourceCacheInterface;
-use JsonApiPresenter\Contracts\ResourceObjectInterface;
 use JsonApiPresenter\Exceptions\NonUniqueResultException;
 use JsonApiPresenter\Exceptions\NoResultException;
 use JsonApiPresenter\Exceptions\RuntimeException;
+use JsonApiPresenter\Requests\FieldsetCollection;
+use JsonApiPresenter\Requests\FiltersCollection;
+use JsonApiPresenter\Requests\Includes;
+use JsonApiPresenter\Requests\Pagination;
+use JsonApiPresenter\Requests\Sorting;
+use JsonApiPresenter\Requests\SortingCollection;
 
 class QueryBuilder
 {
@@ -24,9 +33,9 @@ class QueryBuilder
     private $resourceType;
 
     /**
-     * @var string[]|null
+     * @var string|null
      */
-    private $ids = [];
+    private $id = [];
 
     /**
      * @var string[]
@@ -34,9 +43,34 @@ class QueryBuilder
     private $includes;
 
     /**
+     * @var FieldsetCollection
+     */
+    private $fieldset;
+
+    /**
+     * @var FiltersCollection
+     */
+    private $filters;
+
+    /**
+     * @var SortingCollection
+     */
+    private $sorting;
+
+    /**
+     * @var int|null
+     */
+    private $limit;
+
+    /**
+     * @var int|null
+     */
+    private $offset;
+
+    /**
      * @var string
      */
-    private $delimiter = IncludesRequest::DEFAULT_DELIMITER;
+    private $delimiter = Includes::DEFAULT_DELIMITER;
 
     /**
      * @var ResourceCacheInterface
@@ -52,7 +86,9 @@ class QueryBuilder
     {
         $this->resourceManager = $resourceManager;
         $this->cache = $cache;
-        $this->includes = new IncludesRequest();
+        $this->fieldset = new FieldsetCollection();
+        $this->filters = new FiltersCollection();
+        $this->sorting = new SortingCollection();
     }
 
     /**
@@ -72,18 +108,67 @@ class QueryBuilder
      */
     public function withId(string $id): QueryBuilder
     {
-        $this->ids = [$id];
+        $this->id = $id;
 
         return $this;
     }
 
     /**
-     * @param string ...$ids
+     * @param string $field
+     * @param string $operator
+     * @param $value
      * @return QueryBuilder
      */
-    public function withIds(string ...$ids): QueryBuilder
+    public function where(string $field, string $operator, $value): QueryBuilder
     {
-        $this->ids = $ids;
+        $this->filters->add($field, $operator, $value);
+
+        return $this;
+    }
+
+    /**
+     * @param string $field
+     * @param string $direction
+     * @return QueryBuilder
+     * @throws Exceptions\InvalidArgumentException
+     */
+    public function orderBy(string $field, string $direction = Sorting::DIRECTION_ASC): QueryBuilder
+    {
+        $this->sorting->add($field, $direction);
+
+        return $this;
+    }
+
+    /**
+     * @param int $limit
+     * @return QueryBuilder
+     */
+    public function limit(int $limit): QueryBuilder
+    {
+        $this->limit = $limit;
+
+        return $this;
+    }
+
+    /**
+     * @param int $offset
+     * @return QueryBuilder
+     */
+    public function offset(int $offset): QueryBuilder
+    {
+        $this->offset = $offset;
+
+        return $this;
+    }
+
+    /**
+     * @param string $type
+     * @param string ...$fields
+     * @return QueryBuilder
+     */
+    public function fieldset(string $type, string ...$fields): QueryBuilder
+    {
+        $this->fieldset->add($type, ...$fields);
 
         return $this;
     }
@@ -123,12 +208,12 @@ class QueryBuilder
      */
     public function getSingleResult(Meta $meta = null, ResourceLinks $links = null, JsonApi $jsonApi = null): Document
     {
-        if (\count($this->ids) != 1) {
-            throw new RuntimeException();
+        if (null === $this->id) {
+            throw new RuntimeException('Unable to fetch resource by id. Id is not set');
         }
 
         $identity = new ResourceIdentifier(
-            \reset($this->ids),
+            $this->id,
             $this->resourceType
         );
 
@@ -158,25 +243,76 @@ class QueryBuilder
      */
     public function getResult(Meta $meta = null, ResourceLinks $links = null, JsonApi $jsonApi = null): Collection
     {
-        $resources = $this->getResourcesCollection(...\array_map(function(string $id) {
-            return new ResourceIdentifier($id, $this->resourceType);
-        }, $this->ids));
+        if (null === $this->resourceType) {
+            throw new RuntimeException('Please specify resource type by calling `select()` method');
+        }
 
-        $includes = $this->getIncludesForResources($this->getIncludesRequest(), ...$resources);
+        $dataSource = $this->resourceManager->dataSourceFor(
+            $this->resourceType
+        );
+
+        if (!$dataSource instanceof QueryableDataSourceInterface) {
+            throw new RuntimeException(\sprintf('Data source of %s must be queryable', $this->resourceType));
+        }
+
+        $pagination = new Pagination(
+            $this->limit,
+            $this->offset
+        );
+
+        $resources = $dataSource->fetch(
+            $this->filters,
+            $this->sorting,
+            $pagination
+        );
+
+        $paginationLinks = null;
+
+        if ($dataSource instanceof AppliesRelationshipsDataSourceInterface) {
+            $dataSource->applyRelationships(...$resources);
+        }
+
+        if ($dataSource instanceof ProvidesPaginationLinksDataSourceInterface) {
+            $paginationLinks = $dataSource->providePaginationLinks(
+                $this->filters,
+                $this->sorting,
+                $pagination
+            );
+        }
+
+        if ($dataSource instanceof CountableDataSourceInterface) {
+            $total = $dataSource->count($this->filters);
+
+            $paginationMeta = new Meta([
+                'total' => $total,
+                'limit' => $pagination->getLimit(),
+                'offset' => $pagination->getOffset(),
+            ]);
+
+            $meta = $paginationMeta->merge($meta);
+        }
+
+        $this->addFieldsetToResourceAttributes($resources);
+
+        $includes = $this->getIncludesForResources(
+            $this->getIncludesRequest(),
+            ...$resources
+        );
+
         $jsonApi = $jsonApi ?? JsonApi::default();
 
         return new Collection(
             $resources,
             $meta,
             $links,
-            null,
+            $paginationLinks,
             $jsonApi,
             ...$includes
         );
     }
 
     /**
-     * @param IncludesRequest $includes
+     * @param Includes $includes
      * @param ResourceObject ...$resources
      * @return array
      * @throws Exceptions\InvalidArgumentException
@@ -185,7 +321,7 @@ class QueryBuilder
      * @throws NonUniqueResultException
      * @throws RuntimeException
      */
-    private function getIncludesForResources(IncludesRequest $includes, ResourceObject ...$resources): array
+    private function getIncludesForResources(Includes $includes, ResourceObject ...$resources): array
     {
         $result = [];
 
@@ -197,7 +333,7 @@ class QueryBuilder
     }
 
     /**
-     * @param IncludesRequest $includes
+     * @param Includes $includes
      * @param ResourceObject $resource
      * @return array
      * @throws Exceptions\InvalidArgumentException
@@ -206,7 +342,7 @@ class QueryBuilder
      * @throws NonUniqueResultException
      * @throws RuntimeException
      */
-    private function getIncludesForResource(IncludesRequest $includes, ResourceObject $resource): array
+    private function getIncludesForResource(Includes $includes, ResourceObject $resource): array
     {
         $relationships = $resource->getRelationships();
         $result = [];
@@ -237,7 +373,7 @@ class QueryBuilder
     }
 
     /**
-     * @param IncludesRequest $includes
+     * @param Includes $includes
      * @param ToOneRelationship $relationship
      * @return array
      * @throws Exceptions\InvalidArgumentException
@@ -246,7 +382,7 @@ class QueryBuilder
      * @throws NonUniqueResultException
      * @throws RuntimeException
      */
-    private function getToOneRelationshipIncludes(IncludesRequest $includes, ToOneRelationship $relationship): array
+    private function getToOneRelationshipIncludes(Includes $includes, ToOneRelationship $relationship): array
     {
         $resource = $this->getSingleResource($relationship->getData());
         $includes = $this->getIncludesForResource(
@@ -258,7 +394,7 @@ class QueryBuilder
     }
 
     /**
-     * @param IncludesRequest $includes
+     * @param Includes $includes
      * @param ToManyRelationship $relationship
      * @return array
      * @throws Exceptions\InvalidArgumentException
@@ -267,7 +403,7 @@ class QueryBuilder
      * @throws NonUniqueResultException
      * @throws RuntimeException
      */
-    private function getToManyRelationshipIncludes(IncludesRequest $includes, ToManyRelationship $relationship): array
+    private function getToManyRelationshipIncludes(Includes $includes, ToManyRelationship $relationship): array
     {
         $resources = $this->getResourcesCollection(...$relationship->getData());
         $includes = $this->getIncludesForResources(
@@ -308,17 +444,23 @@ class QueryBuilder
 
         $resource = reset($resources);
 
+        if ($dataSource instanceof AppliesRelationshipsDataSourceInterface) {
+            $dataSource->applyRelationships($resource);
+        }
+
         $this->cache->add(
             (string) $resource->getIdentifier(),
             $resource
         );
+
+        $this->addFieldsetToResourceAttributes($resource);
 
         return $resource;
     }
 
     /**
      * @param ResourceIdentifier ...$identifiers
-     * @return ResourceObjectInterface[]
+     * @return ResourceObject[]
      * @throws Exceptions\DataSourceNotFoundException
      * @throws RuntimeException
      */
@@ -349,6 +491,10 @@ class QueryBuilder
 
         $resources = $dataSource->havingIds(...$ids);
 
+        if ($dataSource instanceof AppliesRelationshipsDataSourceInterface) {
+            $dataSource->applyRelationships(...$resources);
+        }
+
         foreach ($resources as $resource) {
             $this->cache->add(
                 (string) $resource->getIdentifier(),
@@ -356,15 +502,32 @@ class QueryBuilder
             );
         }
 
+        $this->addFieldsetToResourceAttributes(...$resources);
+
         return \array_merge($result, $resources);
     }
 
     /**
-     * @return IncludesRequest
+     * @param ResourceObject ...$resources
+     * @throws RuntimeException
      */
-    private function getIncludesRequest(): IncludesRequest
+    private function addFieldsetToResourceAttributes(ResourceObject ...$resources)
     {
-        return new IncludesRequest(
+        foreach ($resources as $resource) {
+            $type = $resource->getIdentifier()->getType();
+
+            if ($this->fieldset->hasForType($type)) {
+                $resource->addFieldset($this->fieldset->getFieldsetForType($type));
+            }
+        }
+    }
+
+    /**
+     * @return Includes
+     */
+    private function getIncludesRequest(): Includes
+    {
+        return new Includes(
             $this->includes,
             $this->delimiter
         );

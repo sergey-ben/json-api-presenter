@@ -1,10 +1,10 @@
 <?php
 
 
-namespace JsonApiPresenter;
+namespace JsonApiPresenter\Requests;
 
 
-class IncludesRequest
+class Includes
 {
 
     const DEFAULT_DELIMITER = '.';
@@ -40,9 +40,9 @@ class IncludesRequest
 
     /**
      * @param string $name
-     * @return IncludesRequest
+     * @return Includes
      */
-    public function includesOf(string $name): IncludesRequest
+    public function includesOf(string $name): Includes
     {
         $includes = \array_filter($this->toArray(), function(string $include) use ($name) {
             return \strpos($include, $name . $this->delimiter) === 0;
@@ -52,7 +52,7 @@ class IncludesRequest
             return preg_replace(\sprintf('/%s%s/', $name, $this->delimiter), '', $include, 1);
         }, $includes);
 
-        return new IncludesRequest($includes);
+        return new Includes($includes);
     }
 
     /**

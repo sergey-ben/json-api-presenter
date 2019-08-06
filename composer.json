@@ -23,7 +23,7 @@
     },
     "autoload-dev": {
         "classmap": [
-            "src/example"
+            "example"
         ]
     }
 }

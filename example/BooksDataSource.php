@@ -2,7 +2,6 @@
 
 
 use JsonApiPresenter\Attributes;
-use JsonApiPresenter\Contracts\ResourceObjectInterface;
 use JsonApiPresenter\Contracts\DataSourceInterface;
 use JsonApiPresenter\Link;
 use JsonApiPresenter\RelationshipsCollection;
@@ -72,7 +71,7 @@ class BooksDataSource implements DataSourceInterface
 
     /**
      * @param string[] $ids
-     * @return ResourceObjectInterface[]
+     * @return ResourceObject[]
      */
     public function havingIds(string ...$ids): array
     {

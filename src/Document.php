@@ -4,14 +4,13 @@
 namespace JsonApiPresenter;
 
 
-use JsonApiPresenter\Contracts\ResourceObjectInterface;
 use JsonApiPresenter\Contracts\TopLevelJsonObject;
 
 final class Document implements TopLevelJsonObject
 {
 
     /**
-     * @var ResourceObjectInterface
+     * @var ResourceObject
      */
     private $data;
 
@@ -31,24 +30,24 @@ final class Document implements TopLevelJsonObject
     private $jsonApi;
 
     /**
-     * @var ResourceObjectInterface[]
+     * @var ResourceObject[]
      */
     private $includes;
 
     /**
      * Document constructor.
-     * @param ResourceObjectInterface $data
+     * @param ResourceObject $data
      * @param Meta|null $meta
      * @param ResourceLinks|null $links
      * @param JsonApi|null $jsonApi
-     * @param ResourceObjectInterface ...$includes
+     * @param ResourceObject ...$includes
      */
     public function __construct(
-        ResourceObjectInterface $data,
+        ResourceObject $data,
         Meta $meta = null,
         ResourceLinks $links = null,
         JsonApi $jsonApi = null,
-        ResourceObjectInterface ...$includes
+        ResourceObject ...$includes
     ) {
         $this->data = $data;
         $this->meta = $meta;
@@ -58,15 +57,15 @@ final class Document implements TopLevelJsonObject
     }
 
     /**
-     * @return ResourceObjectInterface
+     * @return ResourceObject
      */
-    public function getData(): ResourceObjectInterface
+    public function getData(): ResourceObject
     {
         return $this->data;
     }
 
     /**
-     * @return ResourceObjectInterface[]
+     * @return ResourceObject[]
      */
     public function getIncludes(): array
     {

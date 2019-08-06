@@ -24,6 +24,20 @@ final class Meta implements Arrayable
     }
 
     /**
+     * @param Meta|null $meta
+     * @return Meta
+     */
+    public function merge(Meta $meta = null): Meta
+    {
+        $merge = null === $meta ? [] : $meta->toArray();
+
+        return new Meta(\array_merge(
+            $this->toArray(),
+            $merge
+        ));
+    }
+
+    /**
      * @return array
      */
     public function toArray(): array

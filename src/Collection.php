@@ -4,14 +4,13 @@
 namespace JsonApiPresenter;
 
 
-use JsonApiPresenter\Contracts\ResourceObjectInterface;
 use JsonApiPresenter\Contracts\TopLevelJsonObject;
 
 final class Collection implements TopLevelJsonObject
 {
 
     /**
-     * @var ResourceObjectInterface[]
+     * @var ResourceObject[]
      */
     private $data;
 
@@ -36,7 +35,7 @@ final class Collection implements TopLevelJsonObject
     private $jsonApi;
 
     /**
-     * @var ResourceObjectInterface[]
+     * @var ResourceObject[]
      */
     private $includes;
 
@@ -47,7 +46,7 @@ final class Collection implements TopLevelJsonObject
      * @param ResourceLinks|null $links
      * @param PaginationLinks|null $paginationLinks
      * @param JsonApi|null $jsonApi
-     * @param ResourceObjectInterface ...$includes
+     * @param ResourceObject ...$includes
      */
     public function __construct(
         array $data = [],
@@ -55,7 +54,7 @@ final class Collection implements TopLevelJsonObject
         ResourceLinks $links = null,
         PaginationLinks $paginationLinks = null,
         JsonApi $jsonApi = null,
-        ResourceObjectInterface ...$includes
+        ResourceObject ...$includes
     ) {
         $this->data = $data;
         $this->meta = $meta;
@@ -66,7 +65,7 @@ final class Collection implements TopLevelJsonObject
     }
 
     /**
-     * @return array|ResourceObjectInterface[]
+     * @return array|ResourceObject[]
      */
     public function getData(): array
     {
@@ -74,7 +73,7 @@ final class Collection implements TopLevelJsonObject
     }
 
     /**
-     * @return ResourceObjectInterface[]
+     * @return ResourceObject[]
      */
     public function getIncludes(): array
     {

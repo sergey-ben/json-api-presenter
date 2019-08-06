@@ -4,9 +4,10 @@
 namespace JsonApiPresenter;
 
 
-use JsonApiPresenter\Contracts\ResourceObjectInterface;
+use JsonApiPresenter\Contracts\Arrayable;
+use JsonApiPresenter\Requests\Fieldset;
 
-class ResourceObject implements ResourceObjectInterface
+class ResourceObject implements Arrayable
 {
 
     /**
@@ -113,6 +114,14 @@ class ResourceObject implements ResourceObjectInterface
         Meta $meta = null
     ) {
         $this->relationships->addToManyRelationship($name, $data, $links, $meta);
+    }
+
+    /**
+     * @param Fieldset $fieldset
+     */
+    public function addFieldset(Fieldset $fieldset)
+    {
+        $this->attributes->addFieldset($fieldset);
     }
 
     /**
