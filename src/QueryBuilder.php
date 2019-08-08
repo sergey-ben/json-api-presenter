@@ -492,7 +492,7 @@ class QueryBuilder
         $resources = $dataSource->havingIds(...$ids);
 
         if ($dataSource instanceof DefinesRelationshipsDataSource) {
-            $dataSource->defineRelationships(...$resources);
+            $dataSource->defineRelationships($resources);
         }
 
         foreach ($resources as $resource) {
@@ -502,9 +502,9 @@ class QueryBuilder
             );
         }
 
-        $this->addFieldsetToResourceAttributes(...$resources);
+        $this->addFieldsetToResourceAttributes($resources);
 
-        return \array_merge($result, $resources);
+        return \array_merge($result, $resources->toArray());
     }
 
     /**
