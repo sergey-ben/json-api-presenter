@@ -64,6 +64,16 @@ class FiltersCollection implements \IteratorAggregate
     }
 
     /**
+     * @param string $filter
+     * @return mixed
+     * @throws RuntimeException
+     */
+    public function getValueOfFilter(string $filter)
+    {
+        return $this->getFilter($filter)->getValue();
+    }
+
+    /**
      * @return \ArrayIterator|Traversable
      */
     public function getIterator()

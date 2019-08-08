@@ -17,10 +17,23 @@ class Pagination
      */
     private $offset;
 
+    /**
+     * Pagination constructor.
+     * @param int|null $limit
+     * @param int|null $offset
+     */
     public function __construct(int $limit = null, int $offset = null)
     {
         $this->limit = $limit;
         $this->offset = $offset;
+    }
+
+    /**
+     * @return Pagination
+     */
+    public static function empty(): Pagination
+    {
+        return new self();
     }
 
     /**

@@ -10,7 +10,7 @@ use JsonApiPresenter\Exceptions\InvalidArgumentException;
 use JsonApiPresenter\Exceptions\RelationshipNotFoundException;
 use Traversable;
 
-class RelationshipsCollection implements Arrayable, \IteratorAggregate
+class ResourceRelationships implements Arrayable, \IteratorAggregate
 {
 
     /**
@@ -47,12 +47,44 @@ class RelationshipsCollection implements Arrayable, \IteratorAggregate
 
     /**
      * @param string $name
+     * @param ResourceIdentifier $identifier
+     * @param ResourceLinks|null $links
+     * @param Meta|null $meta
+     * @throws InvalidArgumentException
+     * @throws RelationshipNotFoundException
+     */
+    public function addToManyRelationship(
+        string $name,
+        ResourceIdentifier $identifier,
+        ResourceLinks $links = null,
+        Meta $meta = null
+    ) {
+        if (!$this->hasRelationship($name)) {
+            $this->addToManyRelationships(
+                $name,
+                [$identifier],
+                $links,
+                $meta
+            );
+
+            return ;
+        }
+
+        $relationship = $this->getRelationship($name);
+
+        if ($relationship instanceof ToManyRelationship) {
+            $relationship->add($identifier);
+        }
+    }
+
+    /**
+     * @param string $name
      * @param ResourceIdentifier[] $data
      * @param ResourceLinks|null $links
      * @param Meta|null $meta
      * @throws InvalidArgumentException
      */
-    public function addToManyRelationship(
+    public function addToManyRelationships(
         string $name,
         array $data,
         ResourceLinks $links = null,

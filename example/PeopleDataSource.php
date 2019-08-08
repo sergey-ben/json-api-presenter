@@ -4,7 +4,7 @@
 use JsonApiPresenter\Attributes;
 use JsonApiPresenter\Contracts\DataSourceInterface;
 use JsonApiPresenter\Link;
-use JsonApiPresenter\RelationshipsCollection;
+use JsonApiPresenter\ResourceRelationships;
 use JsonApiPresenter\ResourceIdentifier;
 use JsonApiPresenter\ResourceLinks;
 use JsonApiPresenter\ResourceObject;
@@ -26,7 +26,7 @@ class PeopleDataSource implements DataSourceInterface
                 new Attributes([
                     'name' => 'Vasya'
                 ]),
-                new RelationshipsCollection(
+                new ResourceRelationships(
                     new ToManyRelationship(
                         'books',
                         [
@@ -44,7 +44,7 @@ class PeopleDataSource implements DataSourceInterface
                 new Attributes([
                     'name' => 'Petya'
                 ]),
-                new RelationshipsCollection(
+                new ResourceRelationships(
                     new ToManyRelationship(
                         'books',
                         [

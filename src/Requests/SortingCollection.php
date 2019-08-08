@@ -26,6 +26,14 @@ class SortingCollection implements \IteratorAggregate
     }
 
     /**
+     * @return SortingCollection
+     */
+    public static function empty(): SortingCollection
+    {
+        return new self();
+    }
+
+    /**
      * @param string $field
      * @param string $direction
      * @throws InvalidArgumentException

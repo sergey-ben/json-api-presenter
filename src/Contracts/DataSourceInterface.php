@@ -4,15 +4,15 @@
 namespace JsonApiPresenter\Contracts;
 
 
-use JsonApiPresenter\ResourceObject;
+use JsonApiPresenter\ResourceObjectsCollection;
 
 interface DataSourceInterface
 {
 
     /**
      * @param string ...$ids
-     * @return ResourceObject[]
+     * @return ResourceObjectsCollection
      */
-    public function havingIds(string ...$ids): array;
+    public function havingIds(string ...$ids): ResourceObjectsCollection;
 
 }

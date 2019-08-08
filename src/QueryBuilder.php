@@ -4,7 +4,7 @@
 namespace JsonApiPresenter;
 
 
-use JsonApiPresenter\Contracts\AppliesRelationshipsDataSourceInterface;
+use JsonApiPresenter\Contracts\DefinesRelationshipsDataSource;
 use JsonApiPresenter\Contracts\CountableDataSourceInterface;
 use JsonApiPresenter\Contracts\ProvidesPaginationLinksDataSourceInterface;
 use JsonApiPresenter\Contracts\QueryableDataSourceInterface;
@@ -35,12 +35,12 @@ class QueryBuilder
     /**
      * @var string|null
      */
-    private $id = [];
+    private $id;
 
     /**
      * @var string[]
      */
-    private $includes;
+    private $includes = [];
 
     /**
      * @var FieldsetCollection
@@ -268,8 +268,8 @@ class QueryBuilder
 
         $paginationLinks = null;
 
-        if ($dataSource instanceof AppliesRelationshipsDataSourceInterface) {
-            $dataSource->applyRelationships(...$resources);
+        if ($dataSource instanceof DefinesRelationshipsDataSource) {
+            $dataSource->defineRelationships($resources);
         }
 
         if ($dataSource instanceof ProvidesPaginationLinksDataSourceInterface) {
@@ -302,7 +302,7 @@ class QueryBuilder
         $jsonApi = $jsonApi ?? JsonApi::default();
 
         return new Collection(
-            $resources,
+            $resources->toArray(),
             $meta,
             $links,
             $paginationLinks,
@@ -442,10 +442,10 @@ class QueryBuilder
             throw new NonUniqueResultException();
         }
 
-        $resource = reset($resources);
+        $resource = $resources->getIterator()->current();
 
-        if ($dataSource instanceof AppliesRelationshipsDataSourceInterface) {
-            $dataSource->applyRelationships($resource);
+        if ($dataSource instanceof DefinesRelationshipsDataSource) {
+            $dataSource->defineRelationships($resource);
         }
 
         $this->cache->add(
@@ -453,7 +453,7 @@ class QueryBuilder
             $resource
         );
 
-        $this->addFieldsetToResourceAttributes($resource);
+        $this->addFieldsetToResourceAttributes($resources);
 
         return $resource;
     }
@@ -481,7 +481,7 @@ class QueryBuilder
             $ids[] = $identifier->getId();
         }
 
-        if (null === $resourceType) {
+        if (null === $resourceType || empty($ids)) {
             return $result;
         }
 
@@ -491,8 +491,8 @@ class QueryBuilder
 
         $resources = $dataSource->havingIds(...$ids);
 
-        if ($dataSource instanceof AppliesRelationshipsDataSourceInterface) {
-            $dataSource->applyRelationships(...$resources);
+        if ($dataSource instanceof DefinesRelationshipsDataSource) {
+            $dataSource->defineRelationships(...$resources);
         }
 
         foreach ($resources as $resource) {
@@ -508,10 +508,10 @@ class QueryBuilder
     }
 
     /**
-     * @param ResourceObject ...$resources
+     * @param ResourceObjectsCollection $resources
      * @throws RuntimeException
      */
-    private function addFieldsetToResourceAttributes(ResourceObject ...$resources)
+    private function addFieldsetToResourceAttributes(ResourceObjectsCollection $resources)
     {
         foreach ($resources as $resource) {
             $type = $resource->getIdentifier()->getType();

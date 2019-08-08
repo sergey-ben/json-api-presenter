@@ -109,7 +109,7 @@ class ResourceObject implements Arrayable
      */
     public function addToManyRelationship(
         string $name,
-        array $data = [],
+        array $data,
         ResourceLinks $links = null,
         Meta $meta = null
     ) {
