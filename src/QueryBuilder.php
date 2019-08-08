@@ -445,7 +445,7 @@ class QueryBuilder
         $resource = $resources->getIterator()->current();
 
         if ($dataSource instanceof DefinesRelationshipsDataSource) {
-            $dataSource->defineRelationships($resource);
+            $dataSource->defineRelationships($resources);
         }
 
         $this->cache->add(
