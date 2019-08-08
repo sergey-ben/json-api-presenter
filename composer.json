@@ -2,7 +2,7 @@
     "name": "simple-lib/json-api-presenter",
     "description": "",
     "keywords": ["json-api", "composer", "transformer", "jsonapi", "json"],
-    "version": "1.0.0",
+    "version": "0.1.0",
     "authors": [
         {
             "name": "Sergey B.",
